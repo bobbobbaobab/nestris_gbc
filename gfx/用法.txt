@@ -1,0 +1,5 @@
+.\png2asset.exe background.png -o background.c -map -keep_palette_order -tile_origin 3
+
+.\png2asset.exe font.png -o font1.c -keep_palette_order
+
+.\png2asset.exe tetromino.png -o tetromino.c -keep_palette_order -spr8x8
