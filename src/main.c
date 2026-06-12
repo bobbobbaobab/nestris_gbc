@@ -175,6 +175,52 @@ static const uint8_t piece_tile[7] = {
 static void spawn_next_piece(void);
 static void reset_game(void);
 
+static void play_sfx_select(void) {
+    CRITICAL {
+        CBTFX_PLAY_SFX_SELECT;
+    }
+}
+
+static void play_sfx_move(void) {
+    CRITICAL {
+        CBTFX_PLAY_SFX_MOVE;
+    }
+}
+
+static void play_sfx_rotate(void) {
+    CRITICAL {
+        CBTFX_PLAY_SFX_ROTATE;
+    }
+}
+
+static void play_sfx_levelup(void) {
+    CRITICAL {
+        CBTFX_PLAY_SFX_LEVELUP;
+    }
+}
+
+static void play_sfx_lock(void) {
+    CRITICAL {
+        CBTFX_PLAY_SFX_LOCK;
+    }
+}
+
+static void play_sfx_lineclear(void) {
+    CRITICAL {
+        CBTFX_PLAY_SFX_LINECLEAR;
+    }
+}
+
+static void play_sfx_tetris(void) {
+    CRITICAL {
+        CBTFX_PLAY_SFX_TETRIS;
+    }
+}
+
+static void audio_vblank(void) {
+    CBTFX_update();
+}
+
 static void start_tuck_tweak(uint8_t side) {
     uint8_t window = gravity_delay + 3u;
 
@@ -542,11 +588,11 @@ static void update_level_select(void) {
     if (btn_pressed(J_LEFT)) {
         selected_level = selected_level ? selected_level - 1u : 29u;
         draw_level_select();
-        CBTFX_PLAY_SFX_SELECT;
+        play_sfx_select();
     } else if (btn_pressed(J_RIGHT)) {
         selected_level = (selected_level >= 29u) ? 0u : selected_level + 1u;
         draw_level_select();
-        CBTFX_PLAY_SFX_SELECT;
+        play_sfx_select();
     }
 
     if (btn_pressed(J_START)) reset_game();
@@ -690,7 +736,7 @@ static void finish_line_clears(void) {
         if (level < 99) {
             level++;
             mark_game_palette_dirty();
-            CBTFX_PLAY_SFX_LEVELUP;
+            play_sfx_levelup();
         }
         update_gravity_delay();
     }
@@ -709,10 +755,10 @@ static void start_line_clear_animation(void) {
     clear_anim_timer = 0;
 
     if (clear_row_count == 4) {
-        CBTFX_PLAY_SFX_TETRIS;
+        play_sfx_tetris();
         start_tetris_flash();
     } else if (clear_row_count) {
-        CBTFX_PLAY_SFX_LINECLEAR;
+        play_sfx_lineclear();
     }
 }
 
@@ -778,7 +824,7 @@ static uint8_t move_current_horiz(int8_t delta) {
     if (can_place(&test)) {
         current = test;
         draw_current_piece();
-        CBTFX_PLAY_SFX_MOVE;
+        play_sfx_move();
         return 1;
     }
     return 0;
@@ -851,7 +897,7 @@ static void rotate_current(int8_t delta) {
 
     next_rot = normalize_rot(test.shape, (int8_t)test.rot + delta);
     if (next_rot == current.rot) {
-        if (current.shape == 0) CBTFX_PLAY_SFX_ROTATE;
+        if (current.shape == 0) play_sfx_rotate();
         return;
     }
 
@@ -859,7 +905,7 @@ static void rotate_current(int8_t delta) {
     if (can_place(&test)) {
         current = test;
         draw_current_piece();
-        CBTFX_PLAY_SFX_ROTATE;
+        play_sfx_rotate();
     }
 }
 
@@ -912,7 +958,7 @@ static void update_game(void) {
         lock_current_piece();
         start_line_clear_animation();
         if (!clear_row_count) {
-            CBTFX_PLAY_SFX_LOCK;
+            play_sfx_lock();
             update_stats_display();
             spawn_next_piece();
         }
@@ -1001,6 +1047,12 @@ void main(void) {
     set_bkg_palette(2, 1, game_palettes[0]);
     set_sprite_palette(1, 1, game_palettes[0]);
 
+    CRITICAL {
+        add_VBL(audio_vblank);
+    }
+    set_interrupts(VBL_IFLAG);
+    enable_interrupts();
+
     SHOW_BKG;
     SHOW_SPRITES;
     DISPLAY_ON;
@@ -1022,7 +1074,6 @@ void main(void) {
             update_game();
         }
 
-        CBTFX_update();
         wait_vbl_done();
         apply_palette_updates();
     }
