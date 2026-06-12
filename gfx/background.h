@@ -13,7 +13,7 @@
 #define background_TILE_H 8
 #define background_WIDTH 160
 #define background_HEIGHT 144
-#define background_TILE_COUNT 7
+#define background_TILE_COUNT 8
 #define background_PALETTE_COUNT 1
 #define background_COLORS_PER_PALETTE 4
 #define background_TOTAL_COLORS 4
@@ -24,6 +24,6 @@ extern const unsigned char background_map[360];
 BANKREF_EXTERN(background)
 
 extern const palette_color_t background_palettes[4];
-extern const uint8_t background_tiles[112];
+extern const uint8_t background_tiles[128];
 
 #endif
