@@ -13,6 +13,6 @@
 
 #ifndef __SFX_TETRIS_h_INCLUDE
 #define __SFX_TETRIS_h_INCLUDE
-#define CBTFX_PLAY_SFX_TETRIS CBTFX_init(&SFX_TETRIS[0])
+#define CBTFX_PLAY_SFX_TETRIS CBTFX_init(&SFX_TETRIS[0]);
 extern const unsigned char SFX_TETRIS[];
 #endif
