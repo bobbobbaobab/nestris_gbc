@@ -44,11 +44,14 @@ static Tetromino next;
 static uint16_t frame_counter;
 static uint32_t score;
 static uint16_t lines;
+static uint16_t tetris_lines;
 static uint8_t level;
 static uint8_t transition_lines;
 static uint8_t gravity_delay;
 static int8_t lock_delay;
 static uint8_t push_down_points;
+static uint8_t dht;
+static uint8_t trt;
 static uint8_t das;
 static uint8_t first_tap;
 static uint8_t fall_release;
@@ -437,6 +440,32 @@ static void update_stats_display(void) {
     draw_uint32(12, 2, score, 7);
     draw_uint8(12, 5, level, 2);
     draw_uint16(15, 5, lines, 3);
+    draw_uint8(12, 13, dht, 3);
+    draw_uint8(12, 16, trt, 3);
+}
+
+static void update_dht_for_locked_piece(void) {
+    if (current.shape == 2) {
+        dht = 1;
+    } else if (dht < 255) {
+        dht++;
+    }
+}
+
+static void update_trt(uint8_t clear_count) {
+    uint16_t total_lines;
+    uint32_t rounded_rate;
+
+    if (clear_count == 4) tetris_lines += 4;
+
+    total_lines = lines + clear_count;
+    if (!total_lines) {
+        trt = 0;
+        return;
+    }
+
+    rounded_rate = (((uint32_t)tetris_lines * 100u) + (total_lines >> 1)) / total_lines;
+    trt = (rounded_rate > 100u) ? 100u : (uint8_t)rounded_rate;
 }
 
 static void lock_current_piece(void) {
@@ -518,6 +547,7 @@ static void apply_line_score(uint8_t clear_count) {
 static void finish_line_clears(void) {
     stop_tetris_flash();
 
+    update_trt(clear_row_count);
     lines += clear_row_count;
     apply_line_score(clear_row_count);
 
@@ -727,6 +757,7 @@ static void update_game(void) {
         lock_delay--;
     } else if (lock_delay == 0) {
         score += push_down_points;
+        update_dht_for_locked_piece();
         lock_current_piece();
         start_line_clear_animation();
         if (!clear_row_count) {
@@ -752,10 +783,13 @@ static void reset_game(void) {
     frame_counter = 0;
     score = 0;
     lines = 0;
+    tetris_lines = 0;
     level = 9;
     transition_lines = 10;
     lock_delay = -1;
     push_down_points = 0;
+    dht = 1;
+    trt = 0;
     das = 0;
     first_tap = 1;
     fall_release = 0;
@@ -789,6 +823,9 @@ static void reset_game(void) {
     draw_text(12, 1, "SCORE");
     draw_text(12, 4, "LV");
     draw_text(15, 4, "LN");
+    draw_text(12, 12, "DHT");
+    draw_text(12, 15, "TRT");
+    draw_text(15, 16, "%");
     // draw_text(12, 7, "next");
     redraw_board();
     draw_next_piece();
