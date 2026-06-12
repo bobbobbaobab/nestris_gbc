@@ -59,6 +59,7 @@ static uint8_t first_tap;
 static uint8_t fall_release;
 static uint8_t game_started;
 static uint8_t game_over;
+static uint8_t game_paused;
 static int8_t tuck_tweak;
 static uint8_t tuck_t;
 static uint8_t tuck_wait;
@@ -542,6 +543,30 @@ static void update_level_select(void) {
     if (btn_pressed(J_START)) reset_game();
 }
 
+static void pause_game(void) {
+    game_paused = 1;
+    hide_current_sprites();
+    draw_text(3, 8, "PAUSE");
+}
+
+static void resume_game(void) {
+    game_paused = 0;
+    redraw_board();
+    if (clear_row_count) {
+        hide_current_sprites();
+    } else {
+        draw_current_piece();
+    }
+}
+
+static void update_pause(void) {
+    if (btn_pressed(J_SELECT)) {
+        reset_game();
+    } else if (btn_pressed(J_START)) {
+        resume_game();
+    }
+}
+
 static void update_dht_for_locked_piece(void) {
     if (current.shape == 2) {
         dht = 1;
@@ -719,6 +744,7 @@ static void spawn_next_piece(void) {
         draw_top_score();
         draw_text(1, 8, "GAME  OVER");
         draw_level_select();
+        game_paused = 0;
         return;
     }
 
@@ -902,6 +928,7 @@ static void reset_game(void) {
     fall_release = 0;
     game_started = 1;
     game_over = 0;
+    game_paused = 0;
     tuck_tweak = -1;
     tuck_t = 0;
     tuck_wait = 0;
@@ -963,6 +990,10 @@ void main(void) {
 
         if (!game_started || game_over) {
             update_level_select();
+        } else if (game_paused) {
+            update_pause();
+        } else if (btn_pressed(J_START)) {
+            pause_game();
         } else {
             update_game();
         }
