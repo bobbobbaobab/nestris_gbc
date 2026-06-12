@@ -46,6 +46,7 @@ static uint32_t score;
 static uint16_t lines;
 static uint16_t tetris_lines;
 static uint8_t level;
+static uint8_t selected_level;
 static uint8_t transition_lines;
 static uint8_t gravity_delay;
 static int8_t lock_delay;
@@ -55,6 +56,7 @@ static uint8_t trt;
 static uint8_t das;
 static uint8_t first_tap;
 static uint8_t fall_release;
+static uint8_t game_started;
 static uint8_t game_over;
 static int8_t tuck_tweak;
 static uint8_t tuck_t;
@@ -152,6 +154,7 @@ static const uint8_t piece_tile[7] = {
 };
 
 static void spawn_next_piece(void);
+static void reset_game(void);
 
 static void start_tuck_tweak(uint8_t side) {
     uint8_t window = gravity_delay + 3u;
@@ -444,6 +447,53 @@ static void update_stats_display(void) {
     draw_uint8(12, 16, trt, 3);
 }
 
+static void draw_game_ui_text(void) {
+    draw_text(12, 1, "SCORE");
+    draw_text(12, 4, "LV");
+    draw_text(15, 4, "LN");
+    draw_text(12, 12, "DHT");
+    draw_text(12, 15, "TRT");
+    draw_text(15, 16, "%");
+}
+
+static void set_level_select_stats(void) {
+    score = 0;
+    lines = 0;
+    tetris_lines = 0;
+    level = selected_level;
+    dht = 1;
+    trt = 0;
+}
+
+static void draw_level_select(void) {
+    draw_text(1, 12, "LEVEL <");
+    draw_uint8(8, 12, selected_level, 2);
+    draw_text(10, 12, ">");
+}
+
+static void init_level_select_screen(void) {
+    HIDE_SPRITES;
+    hide_current_sprites();
+    set_bkg_tiles(0, 0, 20, 18, background_map);
+    set_game_area_palette(1);
+    set_level_select_stats();
+    draw_game_ui_text();
+    update_stats_display();
+    draw_level_select();
+}
+
+static void update_level_select(void) {
+    if (btn_pressed(J_LEFT)) {
+        selected_level = selected_level ? selected_level - 1u : 29u;
+        draw_level_select();
+    } else if (btn_pressed(J_RIGHT)) {
+        selected_level = (selected_level >= 29u) ? 0u : selected_level + 1u;
+        draw_level_select();
+    }
+
+    if (btn_pressed(J_START)) reset_game();
+}
+
 static void update_dht_for_locked_piece(void) {
     if (current.shape == 2) {
         dht = 1;
@@ -618,6 +668,7 @@ static void spawn_next_piece(void) {
         game_over = 1;
         draw_current_piece();
         draw_text(1, 8, "GAME  OVER");
+        draw_level_select();
         return;
     }
 
@@ -784,8 +835,14 @@ static void reset_game(void) {
     score = 0;
     lines = 0;
     tetris_lines = 0;
-    level = 9;
-    transition_lines = 10;
+    level = selected_level;
+    if (level < 10u) {
+        transition_lines = (level + 1u) * 10u;
+    } else if (level < 16u) {
+        transition_lines = 100u;
+    } else {
+        transition_lines = (level * 10u) - 50u;
+    }
     lock_delay = -1;
     push_down_points = 0;
     dht = 1;
@@ -793,6 +850,7 @@ static void reset_game(void) {
     das = 0;
     first_tap = 1;
     fall_release = 0;
+    game_started = 1;
     game_over = 0;
     tuck_tweak = -1;
     tuck_t = 0;
@@ -820,12 +878,7 @@ static void reset_game(void) {
 
     set_bkg_tiles(0, 0, 20, 18, background_map);
     set_game_area_palette(1);
-    draw_text(12, 1, "SCORE");
-    draw_text(12, 4, "LV");
-    draw_text(15, 4, "LN");
-    draw_text(12, 12, "DHT");
-    draw_text(12, 15, "TRT");
-    draw_text(15, 16, "%");
+    draw_game_ui_text();
     // draw_text(12, 7, "next");
     redraw_board();
     draw_next_piece();
@@ -851,14 +904,14 @@ void main(void) {
     SHOW_SPRITES;
     DISPLAY_ON;
 
-    reset_game();
+    init_level_select_screen();
 
     while (1) {
         joyPadPrevious = joyPadCurrent;
         joyPadCurrent = apply_dpad_diagonal_lock(joypad());
 
-        if (game_over) {
-            if (btn_pressed(J_A) || btn_pressed(J_B)) reset_game();
+        if (!game_started || game_over) {
+            update_level_select();
         } else {
             update_game();
         }
