@@ -324,21 +324,8 @@ static uint8_t lock_delay_for_y(int8_t y) {
     return 10;
 }
 
-static void draw_uint32_fixed(uint8_t x, uint8_t y, uint32_t value, uint8_t width) {
-    char buf[11];
-    int8_t i;
-
-    if (width > 10) width = 10;
-    for (i = 9; i >= 0; i--) {
-        buf[i] = (char)('0' + (value % 10u));
-        value /= 10u;
-    }
-    buf[10] = '\0';
-    draw_text(x, y, &buf[10 - width]);
-}
-
 static void update_stats_display(void) {
-    draw_uint32_fixed(13, 2, score, 6);
+    draw_uint32(12, 2, score, 7);
     draw_uint16(12, 5, level, 2);
     draw_uint16(15, 5, lines, 3);
 }
@@ -564,7 +551,7 @@ static void reset_game(void) {
     frame_counter = 0;
     score = 0;
     lines = 0;
-    level = 0;
+    level = 9;
     transition_lines = 10;
     lock_delay = -1;
     push_down_points = 0;
