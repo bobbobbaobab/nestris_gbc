@@ -19,6 +19,9 @@
 
 #define DAS_MAX 16
 #define ARR_DELAY 5
+#define DPAD_LOCK_NONE 0
+#define DPAD_LOCK_HORIZONTAL 1
+#define DPAD_LOCK_DOWN 2
 
 typedef struct Tetromino {
     int8_t x;
@@ -29,6 +32,7 @@ typedef struct Tetromino {
 
 uint8_t joyPadCurrent = 0;
 uint8_t joyPadPrevious = 0;
+static uint8_t dpad_lock_axis = DPAD_LOCK_NONE;
 
 static uint8_t board[BOARD_H][BOARD_W];
 static Tetromino current;
@@ -114,6 +118,28 @@ static uint8_t btn_pressed(uint8_t mask) {
 
 static uint8_t btn_held(uint8_t mask) {
     return joyPadCurrent & mask;
+}
+
+static uint8_t apply_dpad_diagonal_lock(uint8_t input) {
+    uint8_t has_horizontal = input & (J_LEFT | J_RIGHT);
+    uint8_t has_down = input & J_DOWN;
+
+    if (has_horizontal && has_down) {
+        if (dpad_lock_axis == DPAD_LOCK_DOWN) {
+            input &= (uint8_t)~(J_LEFT | J_RIGHT);
+        } else {
+            dpad_lock_axis = DPAD_LOCK_HORIZONTAL;
+            input &= (uint8_t)~J_DOWN;
+        }
+    } else if (has_horizontal) {
+        dpad_lock_axis = DPAD_LOCK_HORIZONTAL;
+    } else if (has_down) {
+        dpad_lock_axis = DPAD_LOCK_DOWN;
+    } else {
+        dpad_lock_axis = DPAD_LOCK_NONE;
+    }
+
+    return input;
 }
 
 static uint8_t normalize_rot(uint8_t shape, int8_t rot) {
@@ -542,6 +568,7 @@ static void reset_game(void) {
     first_tap = 1;
     fall_release = 0;
     game_over = 0;
+    dpad_lock_axis = DPAD_LOCK_NONE;
     rng_state ^= ((uint16_t)DIV_REG << 8) | LY_REG;
 
     update_gravity_delay();
@@ -592,7 +619,7 @@ void main(void) {
 
     while (1) {
         joyPadPrevious = joyPadCurrent;
-        joyPadCurrent = joypad();
+        joyPadCurrent = apply_dpad_diagonal_lock(joypad());
 
         if (game_over) {
             if (btn_pressed(J_A) || btn_pressed(J_B)) reset_game();
