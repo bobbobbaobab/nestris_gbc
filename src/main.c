@@ -204,7 +204,7 @@ static void draw_next_piece(void) {
                 break;
             case 2:
                 x = i;
-                y = 0;
+                y = 1;
                 break;
             default:
                 x = (uint8_t)(shape_offsets[next.shape][0][i][0] + 1);
