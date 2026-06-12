@@ -49,6 +49,9 @@ static uint8_t das;
 static uint8_t first_tap;
 static uint8_t fall_release;
 static uint8_t game_over;
+static int8_t tuck_tweak;
+static uint8_t tuck_t;
+static uint8_t tuck_wait;
 static uint8_t clear_rows[4];
 static uint8_t clear_row_count;
 static uint8_t clear_anim_phase;
@@ -117,6 +120,13 @@ static const uint8_t piece_tile[7] = {
 };
 
 static void spawn_next_piece(void);
+
+static void start_tuck_tweak(uint8_t side) {
+    uint8_t window = gravity_delay + 3u;
+
+    tuck_tweak = (int8_t)side;
+    tuck_t = (window < 8u) ? window : 8u;
+}
 
 static uint8_t btn_pressed(uint8_t mask) {
     return (joyPadCurrent & mask) && !(joyPadPrevious & mask);
@@ -487,15 +497,49 @@ static void spawn_next_piece(void) {
     lock_delay = -1;
     push_down_points = 0;
     fall_release = 1;
+    tuck_t = 0;
+    tuck_tweak = -1;
 }
 
-static void move_current_horiz(int8_t delta) {
+static uint8_t move_current_horiz(int8_t delta) {
     Tetromino test = current;
     test.x += delta;
     if (can_place(&test)) {
         current = test;
         draw_current_piece();
+        return 1;
     }
+    return 0;
+}
+
+static void update_tuck_tweak(void) {
+    if ((tuck_tweak != -1) && (tuck_wait == 0)) {
+        if (tuck_tweak == 0) {
+            if (btn_held(J_RIGHT)) {
+                tuck_t = 0;
+                tuck_tweak = -1;
+            } else if ((lock_delay == -1) && (tuck_t > 0) && move_current_horiz(-1)) {
+                tuck_wait = 40;
+                if (das == DAS_MAX) das -= ARR_DELAY;
+            }
+        } else {
+            if (btn_held(J_LEFT)) {
+                tuck_t = 0;
+                tuck_tweak = -1;
+            } else if ((lock_delay == -1) && (tuck_t > 0) && move_current_horiz(1)) {
+                tuck_wait = 40;
+                if (das == DAS_MAX) das -= ARR_DELAY;
+            }
+        }
+    }
+
+    if (tuck_t > 0) {
+        tuck_t--;
+    } else {
+        tuck_tweak = -1;
+    }
+
+    if (tuck_wait > 0) tuck_wait--;
 }
 
 static void handle_horizontal_input(void) {
@@ -509,8 +553,11 @@ static void handle_horizontal_input(void) {
 
         if (first_tap || (das >= DAS_MAX)) {
             if (lock_delay == -1) {
-                move_current_horiz(moving_left ? -1 : 1);
-                if (das >= DAS_MAX) das = DAS_MAX - ARR_DELAY;
+                if (move_current_horiz(moving_left ? -1 : 1)) {
+                    if (das >= DAS_MAX) das = DAS_MAX - ARR_DELAY;
+                } else {
+                    start_tuck_tweak(moving_left ? 0u : 1u);
+                }
             }
         } else {
             das++;
@@ -520,6 +567,8 @@ static void handle_horizontal_input(void) {
         das = 0;
         first_tap = 1;
     }
+
+    update_tuck_tweak();
 }
 
 static void rotate_current(int8_t delta) {
@@ -611,6 +660,9 @@ static void reset_game(void) {
     first_tap = 1;
     fall_release = 0;
     game_over = 0;
+    tuck_tweak = -1;
+    tuck_t = 0;
+    tuck_wait = 0;
     clear_row_count = 0;
     clear_anim_phase = 0;
     clear_anim_timer = 0;
