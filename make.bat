@@ -67,7 +67,7 @@ IF "!OBJS!"=="" (
 
 REM link all .o files
 echo Linking %OUT%...
-%LCC% -Wm-yC -o "%OUT%" !OBJS! "utils\hUGEDriver.lib"
+%LCC% -Wm-yC -Wm-yt0x1B -Wm-ya4 -o "%OUT%" !OBJS! "utils\hUGEDriver.lib"
 IF ERRORLEVEL 1 GOTO error
 
 DEL /Q *.ihx 2>NUL

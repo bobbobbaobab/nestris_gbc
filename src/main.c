@@ -43,6 +43,7 @@ static Tetromino current;
 static Tetromino next;
 static uint16_t frame_counter;
 static uint32_t score;
+static uint32_t high_score;
 static uint16_t lines;
 static uint16_t tetris_lines;
 static uint8_t level;
@@ -91,6 +92,16 @@ static const palette_color_t flash_palette[] = {
     RGB8(255, 255, 255),
     RGB8(255, 255, 255)
 };
+
+typedef struct SaveData {
+    uint16_t magic;
+    uint32_t high_score;
+    uint16_t checksum;
+} SaveData;
+
+extern SaveData save_data;
+
+#define SAVE_MAGIC 0x4E54u
 
 static const uint8_t diff_map[20] = {
     48, 43, 38, 33, 28, 23, 18, 13, 8, 6,
@@ -447,6 +458,42 @@ static void update_stats_display(void) {
     draw_uint8(12, 16, trt, 3);
 }
 
+static uint16_t score_checksum(uint32_t value) {
+    return (uint16_t)(SAVE_MAGIC ^ (uint16_t)value ^ (uint16_t)(value >> 16));
+}
+
+static void load_high_score(void) {
+    ENABLE_RAM;
+    SWITCH_RAM(0);
+    if ((save_data.magic == SAVE_MAGIC) && (save_data.checksum == score_checksum(save_data.high_score))) {
+        high_score = save_data.high_score;
+    } else {
+        high_score = 0;
+    }
+    DISABLE_RAM;
+}
+
+static void save_high_score(void) {
+    ENABLE_RAM;
+    SWITCH_RAM(0);
+    save_data.magic = SAVE_MAGIC;
+    save_data.high_score = high_score;
+    save_data.checksum = score_checksum(high_score);
+    DISABLE_RAM;
+}
+
+static void update_high_score(void) {
+    if (score > high_score) {
+        high_score = score;
+        save_high_score();
+    }
+}
+
+static void draw_top_score(void) {
+    draw_text(2, 1, "TOP");
+    draw_uint32(2, 2, high_score, 7);
+}
+
 static void draw_game_ui_text(void) {
     draw_text(12, 1, "SCORE");
     draw_text(12, 4, "LV");
@@ -466,9 +513,9 @@ static void set_level_select_stats(void) {
 }
 
 static void draw_level_select(void) {
-    draw_text(1, 12, "LEVEL <");
-    draw_uint8(8, 12, selected_level, 2);
-    draw_text(10, 12, ">");
+    draw_text(1, 14, "LEVEL <");
+    draw_uint8(8, 14, selected_level, 2);
+    draw_text(10, 14, ">");
 }
 
 static void init_level_select_screen(void) {
@@ -477,6 +524,7 @@ static void init_level_select_screen(void) {
     set_bkg_tiles(0, 0, 20, 18, background_map);
     set_game_area_palette(1);
     set_level_select_stats();
+    draw_top_score();
     draw_game_ui_text();
     update_stats_display();
     draw_level_select();
@@ -667,6 +715,8 @@ static void spawn_next_piece(void) {
     if (!can_place(&current)) {
         game_over = 1;
         draw_current_piece();
+        update_high_score();
+        draw_top_score();
         draw_text(1, 8, "GAME  OVER");
         draw_level_select();
         return;
@@ -904,6 +954,7 @@ void main(void) {
     SHOW_SPRITES;
     DISPLAY_ON;
 
+    load_high_score();
     init_level_select_screen();
 
     while (1) {
