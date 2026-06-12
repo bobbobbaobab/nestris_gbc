@@ -8,8 +8,7 @@
 #include "gfx/tetromino.h"
 
 #define BOARD_W 10
-#define BOARD_H 20
-#define HIDDEN_ROWS 2
+#define BOARD_H 18
 #define VISIBLE_H 18
 #define BOARD_BKG_X 1
 #define BOARD_BKG_Y 0
@@ -184,8 +183,7 @@ static void draw_board_cell(uint8_t row, uint8_t col) {
     uint8_t screen_x;
     uint8_t tile;
 
-    if (row < HIDDEN_ROWS) return;
-    screen_y = BOARD_BKG_Y + row - HIDDEN_ROWS;
+    screen_y = BOARD_BKG_Y + row;
     screen_x = BOARD_BKG_X + col;
 
     if (board[row][col] == EMPTY_CELL) {
@@ -258,11 +256,11 @@ static void draw_current_piece(void) {
         set_sprite_tile(i, tile);
         set_sprite_prop(i, 1);
 
-        if ((row >= HIDDEN_ROWS) && (row < BOARD_H) && (col >= 0) && (col < BOARD_W)) {
+        if ((row >= 0) && (row < BOARD_H) && (col >= 0) && (col < BOARD_W)) {
             move_sprite(
                 i,
                 (uint8_t)((BOARD_BKG_X + col) * 8 + 8),
-                (uint8_t)((BOARD_BKG_Y + row - HIDDEN_ROWS) * 8 + 16)
+                (uint8_t)((BOARD_BKG_Y + row) * 8 + 16)
             );
         } else {
             move_sprite(i, 0, 0);
@@ -285,7 +283,7 @@ static uint8_t random_shape(void) {
 static Tetromino make_piece(uint8_t shape) {
     Tetromino piece;
     piece.x = 5;
-    piece.y = 1;
+    piece.y = 0;
     piece.shape = shape;
     piece.rot = 0;
     return piece;
