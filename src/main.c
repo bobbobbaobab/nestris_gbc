@@ -22,6 +22,10 @@
 #define DPAD_LOCK_HORIZONTAL 1
 #define DPAD_LOCK_DOWN 2
 #define CLEAR_ANIM_FRAME_DELAY 3
+#define TETRIS_FLASH_COUNT 5
+#define TETRIS_FLASH_INTERVAL 4
+#define GAME_PALETTE_ID 1
+#define FLASH_PALETTE_ID 2
 
 typedef struct Tetromino {
     int8_t x;
@@ -56,7 +60,25 @@ static uint8_t clear_rows[4];
 static uint8_t clear_row_count;
 static uint8_t clear_anim_phase;
 static uint8_t clear_anim_timer;
+static uint8_t tetris_flash_count;
+static uint8_t tetris_flash_timer;
+static uint8_t tetris_flash_white;
+static uint8_t tetris_flash_palette_dirty;
 static uint16_t rng_state = 0xACE1u;
+
+static const palette_color_t game_palette[] = {
+    RGB8(  0,   0,   0),
+    RGB8(  0,  88, 248),
+    RGB8( 60, 188, 252),
+    RGB8(255, 255, 255)
+};
+
+static const palette_color_t flash_palette[] = {
+    RGB8(255, 255, 255),
+    RGB8(255, 255, 255),
+    RGB8(255, 255, 255),
+    RGB8(255, 255, 255)
+};
 
 static const uint8_t diff_map[20] = {
     48, 43, 38, 33, 28, 23, 18, 13, 8, 6,
@@ -177,6 +199,14 @@ static void set_bkg_palette_area(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uin
     VBK_REG = 0;
 }
 
+static void set_bkg_palette_cell(uint8_t x, uint8_t y, uint8_t palette_id) {
+    uint8_t attr = palette_id & 0x07u;
+
+    VBK_REG = 1;
+    set_bkg_tiles(x, y, 1, 1, &attr);
+    VBK_REG = 0;
+}
+
 static void set_game_area_palette(uint8_t palette_id) {
     uint8_t i;
 
@@ -205,9 +235,11 @@ static void draw_board_cell(uint8_t row, uint8_t col) {
 
     if (board[row][col] == EMPTY_CELL) {
         restore_background_cell(screen_x, screen_y);
+        set_bkg_palette_cell(screen_x, screen_y, FLASH_PALETTE_ID);
     } else {
         tile = board[row][col];
         set_bkg_tiles(screen_x, screen_y, 1, 1, &tile);
+        set_bkg_palette_cell(screen_x, screen_y, GAME_PALETTE_ID);
     }
 }
 
@@ -217,6 +249,40 @@ static void redraw_board(void) {
 
     for (row = 0; row < BOARD_H; row++) {
         for (col = 0; col < BOARD_W; col++) draw_board_cell(row, col);
+    }
+}
+
+static void set_tetris_flash_white(uint8_t white) {
+    tetris_flash_white = white;
+    tetris_flash_palette_dirty = 1;
+}
+
+static void apply_tetris_flash_palette(void) {
+    if (!tetris_flash_palette_dirty) return;
+    set_bkg_palette(FLASH_PALETTE_ID, 1, tetris_flash_white ? flash_palette : game_palette);
+    tetris_flash_palette_dirty = 0;
+}
+
+static void start_tetris_flash(void) {
+    tetris_flash_count = TETRIS_FLASH_COUNT;
+    tetris_flash_timer = 0;
+    set_tetris_flash_white(1);
+    tetris_flash_count--;
+}
+
+static void update_tetris_flash(void) {
+    if (!tetris_flash_white && !tetris_flash_count) return;
+
+    if (tetris_flash_white) {
+        set_tetris_flash_white(0);
+        if (tetris_flash_count) tetris_flash_timer = TETRIS_FLASH_INTERVAL - 1u;
+        return;
+    }
+
+    if (tetris_flash_timer > 0) tetris_flash_timer--;
+    if (tetris_flash_timer == 0) {
+        set_tetris_flash_white(1);
+        tetris_flash_count--;
     }
 }
 
@@ -447,6 +513,8 @@ static void start_line_clear_animation(void) {
     clear_row_count = collect_full_rows(clear_rows);
     clear_anim_phase = 0;
     clear_anim_timer = 0;
+
+    if (clear_row_count == 4) start_tetris_flash();
 }
 
 static void update_line_clear_animation(void) {
@@ -601,6 +669,7 @@ static void update_game(void) {
     uint8_t active_delay;
 
     frame_counter++;
+    update_tetris_flash();
 
     if (clear_row_count) {
         update_line_clear_animation();
@@ -666,6 +735,10 @@ static void reset_game(void) {
     clear_row_count = 0;
     clear_anim_phase = 0;
     clear_anim_timer = 0;
+    tetris_flash_count = 0;
+    tetris_flash_timer = 0;
+    tetris_flash_white = 0;
+    tetris_flash_palette_dirty = 1;
     dpad_lock_axis = DPAD_LOCK_NONE;
     joyPadPrevious = joyPadCurrent;
     rng_state ^= ((uint16_t)DIV_REG << 8) | LY_REG;
@@ -693,13 +766,6 @@ static void reset_game(void) {
 }
 
 void main(void) {
-    const palette_color_t game_palette[] = {
-        RGB8(  0,   0,   0),
-        RGB8(  0,  88, 248),
-        RGB8( 60, 188, 252),
-        RGB8(255, 255, 255)
-    };
-
     DISPLAY_OFF;
 
     set_bkg_data(font_TILE_START, font_TILE_COUNT, font_tiles);
@@ -709,6 +775,7 @@ void main(void) {
 
     set_bkg_palette(0, 1, background_palettes);
     set_bkg_palette(1, 1, game_palette);
+    set_bkg_palette(2, 1, game_palette);
     set_sprite_palette(1, 1, game_palette);
 
     SHOW_BKG;
@@ -729,5 +796,6 @@ void main(void) {
 
         CBTFX_update();
         wait_vbl_done();
+        apply_tetris_flash_palette();
     }
 }
