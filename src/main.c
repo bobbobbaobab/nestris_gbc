@@ -446,17 +446,16 @@ static void spawn_next_piece(void) {
 
     if (!can_place(&current)) {
         game_over = 1;
-        hide_current_sprites();
-        draw_text(1, 8, "GAME  OVER");
-    } else {
         draw_current_piece();
+        draw_text(1, 8, "GAME  OVER");
+        return;
     }
+
+    draw_current_piece();
 
     lock_delay = -1;
     push_down_points = 0;
     fall_release = 1;
-    das = 0;
-    first_tap = 1;
 }
 
 static void move_current_horiz(int8_t delta) {
@@ -472,12 +471,16 @@ static void handle_horizontal_input(void) {
     uint8_t moving_left = btn_held(J_LEFT) && !btn_held(J_RIGHT);
     uint8_t moving_right = btn_held(J_RIGHT) && !btn_held(J_LEFT);
 
-    if (lock_delay != -1) return;
-
     if (moving_left || moving_right) {
+        if (first_tap && ((lock_delay == -1) || (das < (DAS_MAX - ARR_DELAY)))) {
+            das = 0;
+        }
+
         if (first_tap || (das >= DAS_MAX)) {
-            move_current_horiz(moving_left ? -1 : 1);
-            if (das >= DAS_MAX) das = DAS_MAX - ARR_DELAY;
+            if (lock_delay == -1) {
+                move_current_horiz(moving_left ? -1 : 1);
+                if (das >= DAS_MAX) das = DAS_MAX - ARR_DELAY;
+            }
         } else {
             das++;
         }
@@ -491,7 +494,7 @@ static void handle_horizontal_input(void) {
 static void rotate_current(int8_t delta) {
     Tetromino test = current;
 
-    if ((lock_delay != -1) || piece_blocked_down()) return;
+    if ((lock_delay != -1)) return;
 
     test.rot = normalize_rot(test.shape, (int8_t)test.rot + delta);
     if (can_place(&test)) {
@@ -551,6 +554,9 @@ static void reset_game(void) {
     uint8_t first_shape;
     uint8_t second_shape;
 
+    HIDE_SPRITES;
+    hide_current_sprites();
+
     for (row = 0; row < BOARD_H; row++) {
         for (col = 0; col < BOARD_W; col++) board[row][col] = EMPTY_CELL;
     }
@@ -567,6 +573,7 @@ static void reset_game(void) {
     fall_release = 0;
     game_over = 0;
     dpad_lock_axis = DPAD_LOCK_NONE;
+    joyPadPrevious = joyPadCurrent;
     rng_state ^= ((uint16_t)DIV_REG << 8) | LY_REG;
 
     update_gravity_delay();
@@ -588,6 +595,7 @@ static void reset_game(void) {
     draw_next_piece();
     update_stats_display();
     draw_current_piece();
+    SHOW_SPRITES;
 }
 
 void main(void) {
