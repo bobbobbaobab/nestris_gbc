@@ -16,5 +16,6 @@ extern const palette_color_t font_palettes[4];
 void draw_text(uint8_t x, uint8_t y, const char *text);
 void draw_uint16(uint8_t x, uint8_t y, uint16_t value, uint8_t width);
 void draw_uint8(uint8_t x, uint8_t y, uint8_t value, uint8_t width);
+void draw_uint32(uint8_t x, uint8_t y, uint32_t value, uint8_t width);
 
 #endif

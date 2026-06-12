@@ -163,3 +163,27 @@ void draw_uint8(uint8_t x, uint8_t y, uint8_t value, uint8_t width) {
 
     draw_text(x, y, &buf[3 - width]);
 }
+
+void draw_uint32(uint8_t x, uint8_t y, uint32_t value, uint8_t width) {
+    char buf[11];
+    int8_t i;
+    uint32_t max_value = 1;
+
+    if (width > 10) width = 10;
+
+    for (i = 0; i < width; i++) {
+        max_value *= 10;
+    }
+
+    if (value >= max_value) {
+        value = max_value - 1;
+    }
+
+    for (i = 9; i >= 0; i--) {
+        buf[i] = (char)('0' + (value % 10u));
+        value /= 10u;
+    }
+
+    buf[10] = '\0';
+    draw_text(x, y, &buf[10 - width]);
+}
