@@ -326,7 +326,7 @@ static uint8_t lock_delay_for_y(int8_t y) {
 
 static void update_stats_display(void) {
     draw_uint32(12, 2, score, 7);
-    draw_uint16(12, 5, level, 2);
+    draw_uint8(12, 5, level, 2);
     draw_uint16(15, 5, lines, 3);
 }
 
