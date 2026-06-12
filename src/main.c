@@ -48,7 +48,7 @@ static uint16_t lines;
 static uint16_t tetris_lines;
 static uint8_t level;
 static uint8_t selected_level;
-static uint8_t transition_lines;
+static uint16_t transition_lines;
 static uint8_t gravity_delay;
 static int8_t lock_delay;
 static uint8_t push_down_points;
@@ -912,13 +912,7 @@ static void reset_game(void) {
     lines = 0;
     tetris_lines = 0;
     level = selected_level;
-    if (level < 10u) {
-        transition_lines = (level + 1u) * 10u;
-    } else if (level < 16u) {
-        transition_lines = 100u;
-    } else {
-        transition_lines = (level * 10u) - 50u;
-    }
+    transition_lines = ((uint16_t)level + 1u) * 10u;
     lock_delay = -1;
     push_down_points = 0;
     dht = 1;
