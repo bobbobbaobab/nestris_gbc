@@ -426,10 +426,10 @@ static void update_gravity_delay(void) {
 }
 
 static uint8_t lock_delay_for_y(int8_t y) {
-    if (y <= 5) return 18;
-    if (y <= 9) return 16;
-    if (y <= 13) return 14;
-    if (y <= 17) return 12;
+    if (y <= 4) return 18;
+    if (y <= 8) return 16;
+    if (y <= 12) return 14;
+    if (y <= 16) return 12;
     return 10;
 }
 
@@ -752,7 +752,7 @@ static void reset_game(void) {
     frame_counter = 0;
     score = 0;
     lines = 0;
-    level = 0;
+    level = 9;
     transition_lines = 10;
     lock_delay = -1;
     push_down_points = 0;
