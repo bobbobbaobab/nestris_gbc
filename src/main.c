@@ -6,6 +6,13 @@
 #include "gfx/font.h"
 #include "gfx/background.h"
 #include "gfx/tetromino.h"
+#include "snd/SFX_LEVELUP.h"
+#include "snd/SFX_LINECLEAR.h"
+#include "snd/SFX_LOCK.h"
+#include "snd/SFX_MOVE.h"
+#include "snd/SFX_ROTATE.h"
+#include "snd/SFX_SELECT.h"
+#include "snd/SFX_TETRIS.h"
 
 #define BOARD_W 10
 #define BOARD_H 18
@@ -535,9 +542,11 @@ static void update_level_select(void) {
     if (btn_pressed(J_LEFT)) {
         selected_level = selected_level ? selected_level - 1u : 29u;
         draw_level_select();
+        CBTFX_PLAY_SFX_SELECT;
     } else if (btn_pressed(J_RIGHT)) {
         selected_level = (selected_level >= 29u) ? 0u : selected_level + 1u;
         draw_level_select();
+        CBTFX_PLAY_SFX_SELECT;
     }
 
     if (btn_pressed(J_START)) reset_game();
@@ -681,6 +690,7 @@ static void finish_line_clears(void) {
         if (level < 99) {
             level++;
             mark_game_palette_dirty();
+            CBTFX_PLAY_SFX_LEVELUP;
         }
         update_gravity_delay();
     }
@@ -698,7 +708,12 @@ static void start_line_clear_animation(void) {
     clear_anim_phase = 0;
     clear_anim_timer = 0;
 
-    if (clear_row_count == 4) start_tetris_flash();
+    if (clear_row_count == 4) {
+        CBTFX_PLAY_SFX_TETRIS;
+        start_tetris_flash();
+    } else if (clear_row_count) {
+        CBTFX_PLAY_SFX_LINECLEAR;
+    }
 }
 
 static void update_line_clear_animation(void) {
@@ -763,6 +778,7 @@ static uint8_t move_current_horiz(int8_t delta) {
     if (can_place(&test)) {
         current = test;
         draw_current_piece();
+        CBTFX_PLAY_SFX_MOVE;
         return 1;
     }
     return 0;
@@ -829,13 +845,21 @@ static void handle_horizontal_input(void) {
 
 static void rotate_current(int8_t delta) {
     Tetromino test = current;
+    uint8_t next_rot;
 
     if ((lock_delay != -1)) return;
 
-    test.rot = normalize_rot(test.shape, (int8_t)test.rot + delta);
+    next_rot = normalize_rot(test.shape, (int8_t)test.rot + delta);
+    if (next_rot == current.rot) {
+        if (current.shape == 0) CBTFX_PLAY_SFX_ROTATE;
+        return;
+    }
+
+    test.rot = next_rot;
     if (can_place(&test)) {
         current = test;
         draw_current_piece();
+        CBTFX_PLAY_SFX_ROTATE;
     }
 }
 
@@ -888,6 +912,7 @@ static void update_game(void) {
         lock_current_piece();
         start_line_clear_animation();
         if (!clear_row_count) {
+            CBTFX_PLAY_SFX_LOCK;
             update_stats_display();
             spawn_next_piece();
         }
@@ -959,6 +984,11 @@ static void reset_game(void) {
 }
 
 void main(void) {
+    
+    NR52_REG = 0x80; //开启声音
+    NR51_REG = 0xFF; //开启左右所有声道
+    NR50_REG = 0x77; //左右声道音量设置为最大
+
     DISPLAY_OFF;
 
     set_bkg_data(font_TILE_START, font_TILE_COUNT, font_tiles);
