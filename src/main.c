@@ -21,6 +21,7 @@
 #define DPAD_LOCK_NONE 0
 #define DPAD_LOCK_HORIZONTAL 1
 #define DPAD_LOCK_DOWN 2
+#define CLEAR_ANIM_FRAME_DELAY 3
 
 typedef struct Tetromino {
     int8_t x;
@@ -48,6 +49,10 @@ static uint8_t das;
 static uint8_t first_tap;
 static uint8_t fall_release;
 static uint8_t game_over;
+static uint8_t clear_rows[4];
+static uint8_t clear_row_count;
+static uint8_t clear_anim_phase;
+static uint8_t clear_anim_timer;
 static uint16_t rng_state = 0xACE1u;
 
 static const uint8_t diff_map[20] = {
@@ -110,6 +115,8 @@ static const uint8_t piece_tile[7] = {
     1, /* L */
     2  /* J */
 };
+
+static void spawn_next_piece(void);
 
 static uint8_t btn_pressed(uint8_t mask) {
     return (joyPadCurrent & mask) && !(joyPadPrevious & mask);
@@ -365,29 +372,34 @@ static uint8_t collect_full_rows(uint8_t *rows) {
     return count;
 }
 
-static void remove_full_rows(void) {
+static uint8_t is_clear_row(uint8_t row) {
+    uint8_t i;
+
+    for (i = 0; i < clear_row_count; i++) {
+        if (clear_rows[i] == row) return 1;
+    }
+    return 0;
+}
+
+static void remove_cleared_rows(void) {
     int8_t row;
+    int8_t dst = BOARD_H - 1;
     uint8_t col;
 
     for (row = BOARD_H - 1; row >= 0; row--) {
-        uint8_t full = 1;
-
-        for (col = 0; col < BOARD_W; col++) {
-            if (board[row][col] == EMPTY_CELL) {
-                full = 0;
-                break;
+        if (!is_clear_row((uint8_t)row)) {
+            if (dst != row) {
+                for (col = 0; col < BOARD_W; col++) board[dst][col] = board[row][col];
             }
-        }
-
-        if (full) {
-            int8_t shift_row;
-            for (shift_row = row; shift_row > 0; shift_row--) {
-                for (col = 0; col < BOARD_W; col++) board[shift_row][col] = board[shift_row - 1][col];
-            }
-            for (col = 0; col < BOARD_W; col++) board[0][col] = EMPTY_CELL;
-            row++;
+            dst--;
         }
     }
+
+    while (dst >= 0) {
+        for (col = 0; col < BOARD_W; col++) board[dst][col] = EMPTY_CELL;
+        dst--;
+    }
+
     redraw_board();
 }
 
@@ -401,25 +413,57 @@ static void apply_line_score(uint8_t clear_count) {
     score += (uint32_t)base * (uint32_t)(level + 1u);
 }
 
-static void apply_line_clears(void) {
-    uint8_t rows[4];
-    uint8_t count = collect_full_rows(rows);
+static void finish_line_clears(void) {
+    lines += clear_row_count;
+    apply_line_score(clear_row_count);
 
-    if (!count) return;
-
-    lines += count;
-    apply_line_score(count);
-
-    if (transition_lines > count) {
-        transition_lines -= count;
+    if (transition_lines > clear_row_count) {
+        transition_lines -= clear_row_count;
     } else {
-        transition_lines = 10u + transition_lines - count;
-        level++;
+        transition_lines = 10u + transition_lines - clear_row_count;
+        if (level < 99) level++;
         update_gravity_delay();
     }
 
-    remove_full_rows();
+    remove_cleared_rows();
     update_stats_display();
+    clear_row_count = 0;
+    clear_anim_phase = 0;
+    clear_anim_timer = 0;
+    spawn_next_piece();
+}
+
+static void start_line_clear_animation(void) {
+    clear_row_count = collect_full_rows(clear_rows);
+    clear_anim_phase = 0;
+    clear_anim_timer = 0;
+}
+
+static void update_line_clear_animation(void) {
+    uint8_t i;
+    uint8_t left_col;
+    uint8_t right_col;
+
+    if (!clear_row_count) return;
+
+    clear_anim_timer++;
+    if (clear_anim_timer < CLEAR_ANIM_FRAME_DELAY) return;
+    clear_anim_timer = 0;
+
+    if (clear_anim_phase < 5) {
+        left_col = 4u - clear_anim_phase;
+        right_col = 5u + clear_anim_phase;
+
+        for (i = 0; i < clear_row_count; i++) {
+            board[clear_rows[i]][left_col] = EMPTY_CELL;
+            board[clear_rows[i]][right_col] = EMPTY_CELL;
+            draw_board_cell(clear_rows[i], left_col);
+            draw_board_cell(clear_rows[i], right_col);
+        }
+    }
+
+    clear_anim_phase++;
+    if (clear_anim_phase >= 6) finish_line_clears();
 }
 
 static void spawn_next_piece(void) {
@@ -509,6 +553,12 @@ static void update_game(void) {
 
     frame_counter++;
 
+    if (clear_row_count) {
+        update_line_clear_animation();
+        handle_horizontal_input();
+        return;
+    }
+
     if (btn_held(J_DOWN) && (frame_counter < 50)) frame_counter = 50;
 
     handle_horizontal_input();
@@ -529,9 +579,11 @@ static void update_game(void) {
     } else if (lock_delay == 0) {
         score += push_down_points;
         lock_current_piece();
-        apply_line_clears();
-        update_stats_display();
-        spawn_next_piece();
+        start_line_clear_animation();
+        if (!clear_row_count) {
+            update_stats_display();
+            spawn_next_piece();
+        }
     }
 }
 
@@ -559,6 +611,9 @@ static void reset_game(void) {
     first_tap = 1;
     fall_release = 0;
     game_over = 0;
+    clear_row_count = 0;
+    clear_anim_phase = 0;
+    clear_anim_timer = 0;
     dpad_lock_axis = DPAD_LOCK_NONE;
     joyPadPrevious = joyPadCurrent;
     rng_state ^= ((uint16_t)DIV_REG << 8) | LY_REG;
