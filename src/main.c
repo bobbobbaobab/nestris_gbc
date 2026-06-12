@@ -23,7 +23,7 @@
 #define NEXT_BKG_Y 8
 #define EMPTY_CELL 0xFFu
 
-#define DAS_MAX 16
+#define DAS_MAX 14
 #define ARR_DELAY 5
 #define DPAD_LOCK_NONE 0
 #define DPAD_LOCK_HORIZONTAL 1
@@ -234,6 +234,12 @@ static uint8_t btn_pressed(uint8_t mask) {
 
 static uint8_t btn_held(uint8_t mask) {
     return joyPadCurrent & mask;
+}
+
+static uint8_t reset_combo_pressed(void) {
+    const uint8_t combo = J_A | J_B | J_START | J_SELECT;
+
+    return ((joyPadCurrent & combo) == combo) && ((joyPadPrevious & combo) != combo);
 }
 
 static uint8_t apply_dpad_diagonal_lock(uint8_t input) {
@@ -546,6 +552,7 @@ static void update_high_score(void) {
 static void draw_top_score(void) {
     draw_text(2, 1, "TOP");
     draw_uint32(2, 2, high_score, 7);
+    draw_text(1, 8, "NESTRISgbc");
 }
 
 static void draw_game_ui_text(void) {
@@ -584,13 +591,32 @@ static void init_level_select_screen(void) {
     draw_level_select();
 }
 
+static void soft_reset_game(void) {
+    game_started = 0;
+    game_over = 0;
+    game_paused = 0;
+    lock_delay = -1;
+    push_down_points = 0;
+    clear_row_count = 0;
+    clear_anim_phase = 0;
+    clear_anim_timer = 0;
+    tetris_flash_count = 0;
+    tetris_flash_timer = 0;
+    tetris_flash_white = 0;
+    tetris_flash_palette_dirty = 1;
+    dpad_lock_axis = DPAD_LOCK_NONE;
+
+    init_level_select_screen();
+    mark_game_palette_dirty();
+}
+
 static void update_level_select(void) {
     if (btn_pressed(J_LEFT)) {
-        selected_level = selected_level ? selected_level - 1u : 29u;
+        selected_level = selected_level ? selected_level - 1u : 19u;
         draw_level_select();
         play_sfx_select();
     } else if (btn_pressed(J_RIGHT)) {
-        selected_level = (selected_level >= 29u) ? 0u : selected_level + 1u;
+        selected_level = (selected_level >= 19u) ? 0u : selected_level + 1u;
         draw_level_select();
         play_sfx_select();
     }
@@ -1064,7 +1090,9 @@ void main(void) {
         joyPadPrevious = joyPadCurrent;
         joyPadCurrent = apply_dpad_diagonal_lock(joypad());
 
-        if (!game_started || game_over) {
+        if (reset_combo_pressed()) {
+            soft_reset_game();
+        } else if (!game_started || game_over) {
             update_level_select();
         } else if (game_paused) {
             update_pause();
