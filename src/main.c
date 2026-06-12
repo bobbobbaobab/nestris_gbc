@@ -306,6 +306,12 @@ static void update_tetris_flash(void) {
     }
 }
 
+static void stop_tetris_flash(void) {
+    tetris_flash_count = 0;
+    tetris_flash_timer = 0;
+    set_tetris_flash_white(0);
+}
+
 static void clear_next_box(void) {
     uint8_t x;
     uint8_t y;
@@ -510,6 +516,8 @@ static void apply_line_score(uint8_t clear_count) {
 }
 
 static void finish_line_clears(void) {
+    stop_tetris_flash();
+
     lines += clear_row_count;
     apply_line_score(clear_row_count);
 
@@ -564,7 +572,7 @@ static void update_line_clear_animation(void) {
     }
 
     clear_anim_phase++;
-    if (clear_anim_phase >= 6) finish_line_clears();
+    if (clear_anim_phase >= 5) finish_line_clears();
 }
 
 static void spawn_next_piece(void) {
