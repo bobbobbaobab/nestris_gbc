@@ -13,6 +13,6 @@
 
 #ifndef __SFX_LINECLEAR_h_INCLUDE
 #define __SFX_LINECLEAR_h_INCLUDE
-#define CBTFX_PLAY_SFX_LINECLEAR CBTFX_init(&SFX_LINECLEAR[0])
+#define CBTFX_PLAY_SFX_LINECLEAR CBTFX_init(&SFX_LINECLEAR[0]);
 extern const unsigned char SFX_LINECLEAR[];
 #endif
