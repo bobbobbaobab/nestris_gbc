@@ -195,6 +195,7 @@ static const uint8_t piece_tile[7] = {
 
 static void spawn_next_piece(void);
 static void reset_game(void);
+static void apply_palette_updates(void);
 
 static void play_sfx_select(void) {
     CRITICAL {
@@ -299,6 +300,7 @@ static void stop_music(void) {
 }
 
 static void audio_vblank(void) {
+    apply_palette_updates();
     if (music_active && !music_paused) hUGE_dosound();
     CBTFX_update();
 }
@@ -1297,6 +1299,5 @@ void main(void) {
         }
 
         wait_vbl_done();
-        apply_palette_updates();
     }
 }
