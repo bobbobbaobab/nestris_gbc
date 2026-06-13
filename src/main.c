@@ -691,7 +691,7 @@ static void draw_top_score(void) {
 static void draw_game_ui_text(void) {
     draw_text(12, 1, "SCORE");
     draw_text(12, 4, "LV");
-    draw_text(15, 4, "LN");
+    draw_text(15, 4, "LNS");
     draw_text(12, 12, "DHT");
     draw_text(12, 15, "TRT");
     draw_text(15, 16, "%");
@@ -733,6 +733,7 @@ static void init_level_select_screen(void) {
     hide_current_sprites();
     set_bkg_tiles(0, 0, 20, 18, background_map);
     set_game_area_palette(1);
+    selected_menu_item = MENU_ITEM_LEVEL;
     set_level_select_stats();
     draw_top_score();
     draw_game_ui_text();
@@ -1019,6 +1020,7 @@ static void spawn_next_piece(void) {
         update_high_score();
         draw_top_score();
         draw_text(1, 8, "GAME  OVER");
+        selected_menu_item = MENU_ITEM_LEVEL;
         draw_level_select();
         game_paused = 0;
         return;
