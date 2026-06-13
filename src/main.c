@@ -2,6 +2,7 @@
 #include <gb/cgb.h>
 #include <stdint.h>
 #include "utils/cbtfx.h"
+#include "utils/hUGEDriver.h"
 
 #include "gfx/font.h"
 #include "gfx/background.h"
@@ -23,7 +24,7 @@
 #define NEXT_BKG_Y 8
 #define EMPTY_CELL 0xFFu
 
-#define DAS_MAX 14
+#define DAS_MAX 16
 #define ARR_DELAY 5
 #define DPAD_LOCK_NONE 0
 #define DPAD_LOCK_HORIZONTAL 1
@@ -108,6 +109,7 @@ typedef struct SaveData {
 } SaveData;
 
 extern SaveData save_data;
+extern const hUGESong_t song_descriptor;
 
 #define SAVE_MAGIC 0x4E54u
 
@@ -115,6 +117,9 @@ static const uint8_t diff_map[20] = {
     48, 43, 38, 33, 28, 23, 18, 13, 8, 6,
      5,  5,  5,  4,  4,  4,  3,  3, 3, 2
 };
+
+static uint8_t music_active;
+static uint8_t music_paused;
 
 /* Classic Picotris shape order: O, T, I, S, Z, L, J. */
 static const int8_t shape_offsets[7][4][4][2] = {
@@ -217,7 +222,61 @@ static void play_sfx_tetris(void) {
     }
 }
 
+static void silence_music_channels(void) {
+    NR10_REG = NR11_REG = NR12_REG = NR13_REG = NR14_REG = 0;
+    NR21_REG = NR22_REG = NR23_REG = NR24_REG = 0;
+    NR30_REG = NR31_REG = NR32_REG = NR33_REG = NR34_REG = 0;
+    NR41_REG = NR42_REG = NR43_REG = NR44_REG = 0;
+}
+
+static void mute_music_channels(uint8_t mute) {
+    hUGE_mute_channel(HT_CH1, mute);
+    hUGE_mute_channel(HT_CH2, mute);
+    hUGE_mute_channel(HT_CH3, mute);
+    hUGE_mute_channel(HT_CH4, mute);
+}
+
+static void start_music(void) {
+    CRITICAL {
+        hUGE_init(&song_descriptor);
+        mute_music_channels(HT_CH_PLAY);
+        music_paused = 0;
+        music_active = 1;
+    }
+}
+
+static void pause_music(void) {
+    if (!music_active || music_paused) return;
+
+    CRITICAL {
+        music_paused = 1;
+        mute_music_channels(HT_CH_MUTE);
+        silence_music_channels();
+    }
+}
+
+static void resume_music(void) {
+    if (!music_active || !music_paused) return;
+
+    CRITICAL {
+        mute_music_channels(HT_CH_PLAY);
+        music_paused = 0;
+    }
+}
+
+static void stop_music(void) {
+    if (!music_active && !music_paused) return;
+
+    CRITICAL {
+        music_active = 0;
+        music_paused = 0;
+        mute_music_channels(HT_CH_MUTE);
+        silence_music_channels();
+    }
+}
+
 static void audio_vblank(void) {
+    if (music_active && !music_paused) hUGE_dosound();
     CBTFX_update();
 }
 
@@ -574,9 +633,9 @@ static void set_level_select_stats(void) {
 }
 
 static void draw_level_select(void) {
-    draw_text(1, 14, "LEVEL <");
-    draw_uint8(8, 14, selected_level, 2);
-    draw_text(10, 14, ">");
+    draw_text(1, 13, "LEVEL <");
+    draw_uint8(8, 13, selected_level, 2);
+    draw_text(10, 13, ">");
 }
 
 static void init_level_select_screen(void) {
@@ -592,6 +651,7 @@ static void init_level_select_screen(void) {
 }
 
 static void soft_reset_game(void) {
+    stop_music();
     game_started = 0;
     game_over = 0;
     game_paused = 0;
@@ -626,12 +686,14 @@ static void update_level_select(void) {
 
 static void pause_game(void) {
     game_paused = 1;
+    pause_music();
     hide_current_sprites();
-    draw_text(3, 8, "PAUSE");
+    draw_text(3, 8, "PAUSED");
 }
 
 static void resume_game(void) {
     game_paused = 0;
+    resume_music();
     redraw_board();
     if (clear_row_count) {
         hide_current_sprites();
@@ -826,6 +888,7 @@ static void spawn_next_piece(void) {
 
     if (!can_place(&current)) {
         game_over = 1;
+        stop_music();
         draw_current_piece();
         update_high_score();
         draw_top_score();
@@ -1034,6 +1097,7 @@ static void reset_game(void) {
     dpad_lock_axis = DPAD_LOCK_NONE;
     joyPadPrevious = joyPadCurrent;
     rng_state ^= ((uint16_t)DIV_REG << 8) | LY_REG;
+    start_music();
 
     update_gravity_delay();
 
