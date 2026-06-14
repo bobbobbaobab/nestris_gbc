@@ -125,7 +125,7 @@ typedef struct SaveData {
 } SaveData;
 
 extern SaveData save_data;
-extern const hUGESong_t song_descriptor;
+extern const hUGESong_t tetris_song;
 
 #define SAVE_MAGIC 0x4E54u
 
@@ -262,7 +262,7 @@ static void start_music(void) {
     }
 
     CRITICAL {
-        hUGE_init(&song_descriptor);
+        hUGE_init(&tetris_song);
         mute_music_channels(HT_CH_PLAY);
         music_paused = 0;
         music_active = 1;
