@@ -710,7 +710,7 @@ static void update_high_score(void) {
 static void draw_top_score(void) {
     draw_text(2, 1, "TOP");
     draw_uint32(2, 2, high_score, 7);
-    draw_text(1, 8, "NESTRISgbc");
+    draw_text(1, 8, "NESTRISGBC");
 }
 
 static void draw_game_ui_text(void) {
