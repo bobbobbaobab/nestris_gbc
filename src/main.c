@@ -7,12 +7,15 @@
 #include "gfx/font.h"
 #include "gfx/background.h"
 #include "gfx/tetromino.h"
+#include "snd/SFX_GAMEOVER.h"
 #include "snd/SFX_LEVELUP.h"
 #include "snd/SFX_LINECLEAR.h"
 #include "snd/SFX_LOCK.h"
 #include "snd/SFX_MOVE.h"
+#include "snd/SFX_PAUSE.h"
 #include "snd/SFX_ROTATE.h"
 #include "snd/SFX_SELECT.h"
+#include "snd/SFX_START.h"
 #include "snd/SFX_TETRIS.h"
 
 #define BOARD_W 10
@@ -238,6 +241,24 @@ static void play_sfx_lineclear(void) {
 static void play_sfx_tetris(void) {
     CRITICAL {
         CBTFX_init(&SFX_TETRIS[0]);
+    }
+}
+
+static void play_sfx_pause(void) {
+    CRITICAL {
+        CBTFX_init(&SFX_PAUSE[0]);
+    }
+}
+
+static void play_sfx_start(void) {
+    CRITICAL {
+        CBTFX_init(&SFX_START[0]);
+    }
+}
+
+static void play_sfx_gameover(void) {
+    CRITICAL {
+        CBTFX_init(&SFX_GAMEOVER[0]);
     }
 }
 
@@ -828,6 +849,7 @@ static void update_level_select(void) {
 static void pause_game(void) {
     game_paused = 1;
     pause_music();
+    play_sfx_pause();
     hide_current_sprites();
     draw_text(3, 8, "PAUSED");
 }
@@ -1030,6 +1052,7 @@ static void spawn_next_piece(void) {
     if (!can_place(&current)) {
         game_over = 1;
         stop_music();
+        play_sfx_gameover();
         draw_current_piece();
         update_high_score();
         draw_top_score();
@@ -1243,6 +1266,7 @@ static void reset_game(void) {
     save_settings();
     rng_state ^= ((uint16_t)DIV_REG << 8) | LY_REG;
     start_music();
+    play_sfx_start();
 
     update_gravity_delay();
 
