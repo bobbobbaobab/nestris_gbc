@@ -199,43 +199,43 @@ static void apply_palette_updates(void);
 
 static void play_sfx_select(void) {
     CRITICAL {
-        CBTFX_PLAY_SFX_SELECT;
+       CBTFX_init(&SFX_SELECT[0]);
     }
 }
 
 static void play_sfx_move(void) {
     CRITICAL {
-        CBTFX_PLAY_SFX_MOVE;
+       CBTFX_init(&SFX_MOVE[0]);
     }
 }
 
 static void play_sfx_rotate(void) {
     CRITICAL {
-        CBTFX_PLAY_SFX_ROTATE;
+        CBTFX_init(&SFX_ROTATE[0]);
     }
 }
 
 static void play_sfx_levelup(void) {
     CRITICAL {
-        CBTFX_PLAY_SFX_LEVELUP;
+        CBTFX_init(&SFX_LEVELUP[0]);
     }
 }
 
 static void play_sfx_lock(void) {
     CRITICAL {
-        CBTFX_PLAY_SFX_LOCK;
+        CBTFX_init(&SFX_LOCK[0]);
     }
 }
 
 static void play_sfx_lineclear(void) {
     CRITICAL {
-        CBTFX_PLAY_SFX_LINECLEAR;
+        CBTFX_init(&SFX_LINECLEAR[0]);
     }
 }
 
 static void play_sfx_tetris(void) {
     CRITICAL {
-        CBTFX_PLAY_SFX_TETRIS;
+        CBTFX_init(&SFX_TETRIS[0]);
     }
 }
 
