@@ -39,6 +39,7 @@
 #define CLEAR_ANIM_FRAME_DELAY 3
 #define TETRIS_FLASH_COUNT 5
 #define TETRIS_FLASH_INTERVAL 4
+#define GAME_OVER_DPAD_DELAY 30
 #define GAME_PALETTE_ID 1
 #define FLASH_PALETTE_ID 2
 
@@ -78,6 +79,7 @@ static uint8_t first_tap;
 static uint8_t fall_release;
 static uint8_t game_started;
 static uint8_t game_over;
+static uint8_t game_over_dpad_delay;
 static uint8_t game_paused;
 static int8_t tuck_tweak;
 static uint8_t tuck_t;
@@ -747,6 +749,7 @@ static void soft_reset_game(void) {
     stop_music();
     game_started = 0;
     game_over = 0;
+    game_over_dpad_delay = 0;
     game_paused = 0;
     lock_delay = -1;
     push_down_points = 0;
@@ -764,50 +767,59 @@ static void soft_reset_game(void) {
 }
 
 static void update_level_select(void) {
-    if (btn_pressed(J_UP)) {
-        selected_menu_item = selected_menu_item ? selected_menu_item - 1u : (MENU_ITEM_COUNT - 1u);
-        draw_level_select();
-        play_sfx_select();
-    } else if (btn_pressed(J_DOWN)) {
-        selected_menu_item = (selected_menu_item >= (MENU_ITEM_COUNT - 1u)) ? 0u : selected_menu_item + 1u;
-        draw_level_select();
-        play_sfx_select();
+    uint8_t dpad_locked = 0;
+
+    if (game_over && game_over_dpad_delay) {
+        game_over_dpad_delay--;
+        dpad_locked = 1;
     }
 
-    if (btn_pressed(J_LEFT)) {
-        switch (selected_menu_item) {
-            case MENU_ITEM_MUSIC:
-                selected_music = !selected_music;
-                break;
-            case MENU_ITEM_DAS:
-                selected_das_delay = selected_das_delay ? selected_das_delay - 1u : DAS_DELAY_MAX;
-                break;
-            case MENU_ITEM_ARR:
-                selected_arr_delay = selected_arr_delay ? selected_arr_delay - 1u : ARR_DELAY_MAX;
-                break;
-            default:
-                selected_level = selected_level ? selected_level - 1u : 19u;
-                break;
+    if (!dpad_locked) {
+        if (btn_pressed(J_UP)) {
+            selected_menu_item = selected_menu_item ? selected_menu_item - 1u : (MENU_ITEM_COUNT - 1u);
+            draw_level_select();
+            play_sfx_select();
+        } else if (btn_pressed(J_DOWN)) {
+            selected_menu_item = (selected_menu_item >= (MENU_ITEM_COUNT - 1u)) ? 0u : selected_menu_item + 1u;
+            draw_level_select();
+            play_sfx_select();
         }
-        draw_level_select();
-        play_sfx_select();
-    } else if (btn_pressed(J_RIGHT)) {
-        switch (selected_menu_item) {
-            case MENU_ITEM_MUSIC:
-                selected_music = !selected_music;
-                break;
-            case MENU_ITEM_DAS:
-                selected_das_delay = (selected_das_delay >= DAS_DELAY_MAX) ? 0u : selected_das_delay + 1u;
-                break;
-            case MENU_ITEM_ARR:
-                selected_arr_delay = (selected_arr_delay >= ARR_DELAY_MAX) ? 0u : selected_arr_delay + 1u;
-                break;
-            default:
-                selected_level = (selected_level >= 19u) ? 0u : selected_level + 1u;
-                break;
+
+        if (btn_pressed(J_LEFT)) {
+            switch (selected_menu_item) {
+                case MENU_ITEM_MUSIC:
+                    selected_music = !selected_music;
+                    break;
+                case MENU_ITEM_DAS:
+                    selected_das_delay = selected_das_delay ? selected_das_delay - 1u : DAS_DELAY_MAX;
+                    break;
+                case MENU_ITEM_ARR:
+                    selected_arr_delay = selected_arr_delay ? selected_arr_delay - 1u : ARR_DELAY_MAX;
+                    break;
+                default:
+                    selected_level = selected_level ? selected_level - 1u : 19u;
+                    break;
+            }
+            draw_level_select();
+            play_sfx_select();
+        } else if (btn_pressed(J_RIGHT)) {
+            switch (selected_menu_item) {
+                case MENU_ITEM_MUSIC:
+                    selected_music = !selected_music;
+                    break;
+                case MENU_ITEM_DAS:
+                    selected_das_delay = (selected_das_delay >= DAS_DELAY_MAX) ? 0u : selected_das_delay + 1u;
+                    break;
+                case MENU_ITEM_ARR:
+                    selected_arr_delay = (selected_arr_delay >= ARR_DELAY_MAX) ? 0u : selected_arr_delay + 1u;
+                    break;
+                default:
+                    selected_level = (selected_level >= 19u) ? 0u : selected_level + 1u;
+                    break;
+            }
+            draw_level_select();
+            play_sfx_select();
         }
-        draw_level_select();
-        play_sfx_select();
     }
 
     if (btn_pressed(J_START)) reset_game();
@@ -1023,6 +1035,7 @@ static void spawn_next_piece(void) {
         draw_top_score();
         draw_text(1, 8, "GAME  OVER");
         selected_menu_item = MENU_ITEM_LEVEL;
+        game_over_dpad_delay = GAME_OVER_DPAD_DELAY;
         draw_level_select();
         game_paused = 0;
         return;
@@ -1212,6 +1225,7 @@ static void reset_game(void) {
     fall_release = 0;
     game_started = 1;
     game_over = 0;
+    game_over_dpad_delay = 0;
     game_paused = 0;
     tuck_tweak = -1;
     tuck_t = 0;
