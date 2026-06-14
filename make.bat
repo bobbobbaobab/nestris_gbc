@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 set LCC=..\..\..\bin\lcc
-set OUT=GAME.gbc
+set OUT=Nestris-GBC.gbc
 set OBJDIR=obj
 set OBJS=
 

@@ -1,0 +1,7 @@
+多个拼接输出：
+python hammer2cbt_chain.py hammered.sav 0x0A ../../snd/ --fxchain 0x0A,0x0B --fxchain-name SFX_LINECLEAR
+
+单个输出：
+python hammer2cbt_chain.py hammered.sav 0x10 ../../snd/ --fxchain 0x10 --fxchain-name SFX_TETRIS
+
+记得在生成的.h文件中补全漏掉的分号
