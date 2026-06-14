@@ -62,13 +62,16 @@ python hammer2cbt_chain.py hammered.sav 0x0E ../../snd/ --fxchain 0x0E --fxchain
 python hammer2cbt_chain.py hammered.sav 0x0F ../../snd/ --fxchain 0x0F --fxchain-name SFX_LEVELUP
 python hammer2cbt_chain.py hammered.sav 0x10 ../../snd/ --fxchain 0x10 --fxchain-name SFX_TETRIS
 python hammer2cbt_chain.py hammered.sav 0x3B ../../snd/ --fxchain 0x3B --fxchain-name SFX_LOCK
+python hammer2cbt_chain.py hammered.sav 0x11 ../../snd/ --fxchain 0x11,0x12 --fxchain-name SFX_GAMEOVER
+python hammer2cbt_chain.py hammered.sav 0x16 ../../snd/ --fxchain 0x16 --fxchain-name SFX_PAUSE
+python hammer2cbt_chain.py hammered.sav 0x17 ../../snd/ --fxchain 0x17 --fxchain-name SFX_START
 ```
 
 ## Modifying Background Music
 
 The `.uge` source files are located in the `nestris_gbc\others\UGE\` directory. They can be opened and edited with [GBS Music](https://music.gbstudio.dev/).
 
-After making changes, open the file with [hUGETracker](https://github.com/SuperDisk/hUGETracker), export it as a GBDK `.c` file, and enter `tetris_song` as the song descriptor when exporting. Export and overwrite `nestris_gbc\snd\BGM.c`.At the very end of nestris_gbc\snd\BGM.c, add the following line of code,then rebuild the game:
+After making changes, open the file with [hUGETracker](https://github.com/SuperDisk/hUGETracker), export it as a GBDK `.c` file, and enter `tetris_song` as the song descriptor when exporting. Export and overwrite `nestris_gbc\snd\BGM.c`.At the very end of nestris_gbc\snd\BGM.c, add the following line of code, then rebuild the game:
 
 ```powershell
 const hUGESong_t tetris_song_fast = {2, &order_cnt, order1, order2, order3, order4, duty_instruments, wave_instruments, noise_instruments, NULL, waves};
