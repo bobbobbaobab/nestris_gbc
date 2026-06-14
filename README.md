@@ -1,3 +1,5 @@
+![Preview](preview.gif)
+
 # Nestris GBC
 
 ## Introduction
