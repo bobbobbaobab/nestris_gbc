@@ -8,10 +8,11 @@ This is a Game Boy Color game inspired by NES Tetris.
 
 The code logic is mainly based on this game: [Classic Picotris](https://www.lexaloffle.com/bbs/?tid=54663).
 
+The playfield height is 18 cells, similar to Tetris DX.
+
 ## To Do
 
-1. Finish the incomplete background music.
-2. Replace the current font with a better one.
+Finish the incomplete background music.
 
 ## Build Instructions
 
