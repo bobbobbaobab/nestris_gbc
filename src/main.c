@@ -43,6 +43,8 @@
 #define TETRIS_FLASH_COUNT 5
 #define TETRIS_FLASH_INTERVAL 4
 #define GAME_OVER_DPAD_DELAY 30
+#define MUSIC_FAST_STACK_HEIGHT 14
+#define MUSIC_FAST_TOP_ROW (BOARD_H - MUSIC_FAST_STACK_HEIGHT)
 #define GAME_PALETTE_ID 1
 #define FLASH_PALETTE_ID 2
 
@@ -131,6 +133,7 @@ typedef struct SaveData {
 
 extern SaveData save_data;
 extern const hUGESong_t tetris_song;
+extern const hUGESong_t tetris_song_fast;
 
 #define SAVE_MAGIC 0x4E54u
 
@@ -141,6 +144,7 @@ static const uint8_t diff_map[20] = {
 
 static uint8_t music_active;
 static uint8_t music_paused;
+static uint8_t music_fast;
 
 /* Classic Picotris shape order: O, T, I, S, Z, L, J. */
 static const int8_t shape_offsets[7][4][4][2] = {
@@ -277,6 +281,8 @@ static void mute_music_channels(uint8_t mute) {
 }
 
 static void start_music(void) {
+    music_fast = 0;
+
     if (!selected_music) {
         music_active = 0;
         music_paused = 0;
@@ -289,6 +295,18 @@ static void start_music(void) {
         mute_music_channels(HT_CH_PLAY);
         music_paused = 0;
         music_active = 1;
+    }
+}
+
+static void set_music_fast(uint8_t fast) {
+    if (music_fast == fast) return;
+
+    music_fast = fast;
+    if (!music_active) return;
+
+    CRITICAL {
+        hUGE_init(fast ? &tetris_song_fast : &tetris_song);
+        mute_music_channels(music_paused ? HT_CH_MUTE : HT_CH_PLAY);
     }
 }
 
@@ -317,6 +335,7 @@ static void stop_music(void) {
     CRITICAL {
         music_active = 0;
         music_paused = 0;
+        music_fast = 0;
         mute_music_channels(HT_CH_MUTE);
         silence_music_channels();
     }
@@ -897,6 +916,22 @@ static void update_trt(uint8_t clear_count) {
     trt = (rounded_rate > 100u) ? 100u : (uint8_t)rounded_rate;
 }
 
+static uint8_t stack_reaches_fast_height(void) {
+    uint8_t row;
+    uint8_t col;
+
+    for (row = 0; row <= MUSIC_FAST_TOP_ROW; row++) {
+        for (col = 0; col < BOARD_W; col++) {
+            if (board[row][col] != EMPTY_CELL) return 1;
+        }
+    }
+    return 0;
+}
+
+static void update_music_speed_for_stack(void) {
+    set_music_fast(stack_reaches_fast_height());
+}
+
 static void lock_current_piece(void) {
     uint8_t i;
     int8_t row;
@@ -993,6 +1028,7 @@ static void finish_line_clears(void) {
     }
 
     remove_cleared_rows();
+    update_music_speed_for_stack();
     update_stats_display();
     clear_row_count = 0;
     clear_anim_phase = 0;
@@ -1211,6 +1247,7 @@ static void update_game(void) {
         score += push_down_points;
         update_dht_for_locked_piece();
         lock_current_piece();
+        update_music_speed_for_stack();
         start_line_clear_animation();
         if (!clear_row_count) {
             play_sfx_lock();
