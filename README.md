@@ -62,6 +62,9 @@ python hammer2cbt_chain.py hammered.sav 0x0E ../../snd/ --fxchain 0x0E --fxchain
 python hammer2cbt_chain.py hammered.sav 0x0F ../../snd/ --fxchain 0x0F --fxchain-name SFX_LEVELUP
 python hammer2cbt_chain.py hammered.sav 0x10 ../../snd/ --fxchain 0x10 --fxchain-name SFX_TETRIS
 python hammer2cbt_chain.py hammered.sav 0x3B ../../snd/ --fxchain 0x3B --fxchain-name SFX_LOCK
+python hammer2cbt_chain.py hammered.sav 0x11 ../../snd/ --fxchain 0x11,0x12 --fxchain-name SFX_GAMEOVER
+python hammer2cbt_chain.py hammered.sav 0x16 ../../snd/ --fxchain 0x16 --fxchain-name SFX_PAUSE
+python hammer2cbt_chain.py hammered.sav 0x17 ../../snd/ --fxchain 0x17 --fxchain-name SFX_START
 ```
 
 ## Modifying Background Music
